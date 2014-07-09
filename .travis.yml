@@ -3,6 +3,7 @@ language: shell
 
 # Install build dependencies
 install:
+  - sudo apt-get -qq update
   - sudo apt-get -qq install devscripts
 
 # Install externals and build
