@@ -5,11 +5,13 @@ language: shell
 install:
   - sudo apt-get -qq update
   - sudo apt-get -qq install devscripts
+  - pip install pep8
 
-# Install externals and build
+# Check script and module formatting
 script:
   - checkbashisms scripts/run-tests.sh
   - checkbashisms scripts/run-pep8.sh
+  - pep8 modules/version_check.py
 
 # Send notifications
 notifications:
