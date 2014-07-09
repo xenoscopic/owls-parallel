@@ -1,0 +1,16 @@
+# Set the project language
+language: shell
+
+# Install build dependencies
+install:
+  - sudo apt-get -qq install devscripts
+
+# Install externals and build
+script:
+  - checkbashisms scripts/run-tests.sh
+  - checkbashisms scripts/run-pep8.sh
+
+# Send notifications
+notifications:
+  email:
+    - jacob@havoc.io
