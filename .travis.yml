@@ -1,5 +1,8 @@
 # Set the project language
-language: shell
+# NOTE: We have to specify Python or we can't use pip for some reason (it's a
+# permissions thing).  In any case, we're still okay to use checkbashisms if we
+# use Python.
+language: python
 
 # Install build dependencies
 install:
