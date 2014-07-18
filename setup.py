@@ -28,7 +28,7 @@ setup(
     # Metadata for PyPI
     author = 'Jacob Howard',
     author_email = 'jacob@havoc.io',
-    description = 'Modular analysis toolkit - caching module',
+    description = 'Modular analysis toolkit - parallelization module',
     license = 'MIT',
     keywords = 'python big data analysis',
     url = 'https://github.com/havoc-io/owls-parallel'
