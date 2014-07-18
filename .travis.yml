@@ -13,7 +13,7 @@ python:
 install:
   - sudo apt-get -qq update
   - pip install pep8
-  - pip install ipython[all]
+  - pip install ipython pyzmq
   - pip install git+https://github.com/havoc-io/owls-cache.git
   - pip install -e .
 
