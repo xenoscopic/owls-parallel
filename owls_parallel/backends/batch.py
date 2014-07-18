@@ -5,7 +5,7 @@
 # System imports
 from os.path import exists, isdir, join
 from os import makedirs
-from subprocess import check_output, check_call, CalledProcessError
+from subprocess import check_output, CalledProcessError
 from uuid import uuid4
 from time import sleep
 
@@ -81,7 +81,7 @@ class BatchParallelizationBackend(ParallelizationBackend):
         # Go through each job and create a batch job for it
         for job in jobs:
             # Create the job content
-            batch_script = _BATCH_TEMPLATE.format({
+            batch_script = _BATCH_TEMPLATE.format(**{
                 "cache": dumps(cache),
                 "operations": dumps(job)
             })
@@ -136,7 +136,7 @@ def qsub_monitor(job_id):
     try:
         # If the qstat command returns a 0 exit code, it means the jobs was
         # found, which means it is running
-        check_call(['qstat', job_id])
+        check_output(['qstat', job_id])
         return False
     except CalledProcessError:
         # If the qstat command returns a non-0 exit code, it means the job was
