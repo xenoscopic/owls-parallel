@@ -17,9 +17,6 @@ from owls_parallel.backends.ipython import IPythonParallelizationBackend
 from owls_parallel.testing import counter, computation
 
 
-computation.__name__ = 'owls_parallel.testing.computation'
-
-
 # Create and set the global persistent cache
 set_persistent_cache(FileSystemPersistentCache(mkdtemp()))
 

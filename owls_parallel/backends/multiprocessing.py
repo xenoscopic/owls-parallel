@@ -27,7 +27,6 @@ class _Runner(object):
 
         # Run the operations in the job
         for function, args, kwargs in job:
-            print(function, args, kwargs)
             function(*args, **kwargs)
 
 
@@ -53,4 +52,4 @@ class MultiprocessingParallelizationBackend(ParallelizationBackend):
             jobs: The job specification (see
                 owls_parallel.backends.ParallelizationBackend)
         """
-        map(_Runner(cache), jobs)
+        self._cluster.map(_Runner(cache), jobs)

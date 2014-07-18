@@ -36,6 +36,3 @@ def computation(a, b):
 
     # Return the result
     return a + b
-
-
-# computation_parallel = parallelized(lambda a, b: 0, lambda a, b: 'key')(computation)

@@ -53,13 +53,13 @@ def parallelized(default_generator, mapper):
     # Create the decorator
     def decorator(f):
         # Create the wrapper function
+        @wraps(f)
         def wrapper(*args, **kwargs):
             # Grab the current parallelizer
             parallelizer = _get_parallelizer()
 
             # If we're not in capture mode, then we're done
             if parallelizer is None:
-                print('here', args, kwargs)
                 if args == ():
                     raise RuntimeError('wtf')
                 return f(*args, **kwargs)
@@ -69,7 +69,9 @@ def parallelized(default_generator, mapper):
             key = mapper(*args, **kwargs)
 
             # Register the job with the parallelizer
-            parallelizer._record(key, f, args, kwargs)
+            # NOTE: We register the *wrapper* function, because it is what will
+            # be assigned to the name of the function
+            parallelizer._record(key, wrapper, args, kwargs)
 
             # Return a dummy value
             return default_generator(*args, **kwargs)
