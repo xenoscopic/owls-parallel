@@ -2,6 +2,10 @@
 """
 
 
+# Export the owls-parallel version
+__version__ = '0.0.1'
+
+
 # System imports
 import threading
 from collections import defaultdict
