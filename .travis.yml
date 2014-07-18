@@ -12,7 +12,7 @@ python:
 # in order to get dependencies
 install:
   - sudo apt-get -qq update
-  - sudo apt-get -qq install libzmq1 libzmq-dev
+  - sudo apt-get -qq install libzmq-dev
   - pip install pep8
   - pip install ipython[all]
   - pip install git+https://github.com/havoc-io/owls-cache.git
