@@ -21,15 +21,17 @@ multiprocessing_backend = MultiprocessingParallelizationBackend(2)
 
 
 # If we're using Python 2.7 and IPython is available, create the backend
+ipython_backend = None
 if version_info[:2] == (2, 7):
     try:
         from owls_parallel.backends.ipython import IPythonParallelizationBackend
         ipython_backend = IPythonParallelizationBackend()
     except:
-        ipython_backend = None
+        pass
 
 
 # Try to set up the batch backend, but only if the qsub command is available
+batch_backend = None
 try:
     check_output(['qstat'])
     from owls_parallel.backends.batch import BatchParallelizationBackend, \
@@ -39,7 +41,7 @@ try:
                                                 qsub_monitor,
                                                 5)
 except:
-    batch_backend = None
+    pass
 
 
 class TestParallelizationBase(unittest.TestCase):
