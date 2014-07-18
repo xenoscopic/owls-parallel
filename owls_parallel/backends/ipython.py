@@ -50,4 +50,4 @@ class IPythonParallelizationBackend(ParallelizationBackend):
             jobs: The job specification (see
                 owls_parallel.backends.ParallelizationBackend)
         """
-        self._cluster.map(_Runner(cache), jobs)
+        self._cluster.map_sync(_Runner(cache), jobs)

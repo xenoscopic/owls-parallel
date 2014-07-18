@@ -17,10 +17,6 @@ from owls_parallel.backends.ipython import IPythonParallelizationBackend
 from owls_parallel.testing import counter, computation
 
 
-# Create and set the global persistent cache
-set_persistent_cache(FileSystemPersistentCache(mkdtemp()))
-
-
 # Set up the multiprocessing backend
 multiprocessing_backend = MultiprocessingParallelizationBackend()
 
@@ -46,6 +42,9 @@ except:
 
 class TestParallelizationBase(unittest.TestCase):
     def execute(self):
+        # Create and set the global persistent cache
+        set_persistent_cache(FileSystemPersistentCache(mkdtemp()))
+
         # Reset the counter
         global counter
         counter.value = 0

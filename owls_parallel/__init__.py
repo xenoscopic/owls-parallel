@@ -64,8 +64,6 @@ def parallelized(default_generator, mapper):
 
             # If we're not in capture mode, then we're done
             if parallelizer is None:
-                if args == ():
-                    raise RuntimeError('wtf')
                 return f(*args, **kwargs)
 
             # Otherwise, we are in capture mode, so we need to compute the key
