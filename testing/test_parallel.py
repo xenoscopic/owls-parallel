@@ -24,7 +24,8 @@ multiprocessing_backend = MultiprocessingParallelizationBackend(2)
 ipython_backend = None
 if version_info[:2] == (2, 7):
     try:
-        from owls_parallel.backends.ipython import IPythonParallelizationBackend
+        from owls_parallel.backends.ipython import \
+            IPythonParallelizationBackend
         ipython_backend = IPythonParallelizationBackend()
     except:
         pass
