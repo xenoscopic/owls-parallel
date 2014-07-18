@@ -1,6 +1,6 @@
 # System imports
 import unittest
-from subprocess import check_call
+from subprocess import check_output
 from tempfile import mkdtemp
 
 # owls-cache imports
@@ -22,7 +22,7 @@ set_persistent_cache(FileSystemPersistentCache(mkdtemp()))
 
 
 # Set up the multiprocessing backend
-multiprocessing_backend = MultiprocessingParallelizationBackend()
+multiprocessing_backend = MultiprocessingParallelizationBackend(2)
 
 
 # Try to set up the IPython backend, which may fail if an IPython cluster is
@@ -35,7 +35,7 @@ except:
 
 # Try to set up the batch backend, but only if the qsub command is available
 try:
-    check_call(['qstat'])
+    check_output(['qstat'])
     batch_backend = BatchParallelizationBackend(mkdtemp(),
                                                 qsub_submit,
                                                 qsub_monitor,
