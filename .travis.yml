@@ -19,7 +19,7 @@ install:
 
 # Start an IPython cluster
 before_script:
- - if [ "$TRAVIS_PYTHON_VERSION" == '2.7' ]; then ipcluster start -n 2 &; sleep 60; fi
+ - if [ "$TRAVIS_PYTHON_VERSION" == '2.7' ]; then ipcluster start -n 2 & sleep 60; fi
 
 # Run PEP-8 compliance testing and unit tests
 script:
