@@ -1,0 +1,34 @@
+# Set the project language
+language: python
+
+# Set up the build matrix
+python:
+  - "2.7"
+  - "3.2"
+  - "3.3"
+  - "3.4"
+
+# Install testing dependencies (nose is pre-installed) and the module itself
+# in order to get dependencies
+install:
+  - sudo apt-get -qq update
+  - sudo apt-get -qq install libzmq1 libzmq-dev
+  - pip install pep8
+  - pip install ipython[all]
+  - pip install git+https://github.com/havoc-io/owls-cache.git
+  - pip install -e .
+
+# Start an IPython cluster
+before_script:
+ - ipcluster start &
+ - sleep 35
+
+# Run PEP-8 compliance testing and unit tests
+script:
+  - common/scripts/run-pep8.sh
+  - common/scripts/run-tests.sh
+
+# Send notifications
+notifications:
+  email:
+    - jacob@havoc.io
