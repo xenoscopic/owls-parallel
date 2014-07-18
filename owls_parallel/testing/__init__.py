@@ -14,7 +14,10 @@ from owls_parallel import parallelized
 
 
 # Global counter which records the number of times the computation is called
-counter = 0
+class CallCount(object):
+    def __init__(self):
+        self.value = 0
+counter = CallCount()
 
 
 @parallelized(lambda a, b: 0, lambda a, b: 'key')
@@ -32,7 +35,7 @@ def computation(a, b):
     """
     # Increment the counter
     global counter
-    counter += 1
+    counter.value += 1
 
     # Return the result
     return a + b

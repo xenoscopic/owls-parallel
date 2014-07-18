@@ -48,7 +48,7 @@ class TestParallelizationBase(unittest.TestCase):
     def execute(self):
         # Reset the counter
         global counter
-        counter = 0
+        counter.value = 0
 
         # Create a parallelization environment with the current backend
         parallel = ParallelizedEnvironment(self._backend)
@@ -60,12 +60,16 @@ class TestParallelizationBase(unittest.TestCase):
             z = computation(5, 6)
 
         # Make sure the computation was never invoked locally
-        self.assertEqual(counter, 0)
+        self.assertEqual(counter.value, 0)
 
         # Validate the results
         self.assertEqual(x, 3)
         self.assertEqual(y, 7)
         self.assertEqual(z, 11)
+
+        # Run outside of the parallelization environment
+        self.assertEqual(computation(7, 8), 15)
+        self.assertEqual(counter.value, 1)
 
 
 class TestMultiprocessingParallelization(TestParallelizationBase):

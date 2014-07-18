@@ -87,14 +87,15 @@ class BatchParallelizationBackend(ParallelizationBackend):
             })
 
             # Create an on-disk handle
-            job_path = join(self._path, uuid4().hex)
+            script_name = '{0}.py'.format(uuid4().hex)
+            script_path = join(self._path, script_name)
 
             # Write it to file
-            with open(job_path, 'w') as f:
+            with open(script_path, 'w') as f:
                 f.write(batch_script)
 
             # Submit the batch job and record the job id
-            unfinished.append(self._submit(job_path))
+            unfinished.append(self._submit(self._path, script_name))
 
         # Monitor completion of batch jobs
         while True:
