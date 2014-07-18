@@ -20,7 +20,7 @@ install:
 # Start an IPython cluster
 before_script:
  - ipcluster start -n 2 &
- - sleep 35
+ - sleep 60
 
 # Run PEP-8 compliance testing and unit tests
 script:
