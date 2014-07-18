@@ -2,6 +2,10 @@
 """
 
 
+# HACK: Use absolute_import behavior to get around module having the same name
+# as the global multiprocessing module
+from __future__ import absolute_import
+
 # System imports
 from multiprocessing import Pool
 
@@ -23,6 +27,7 @@ class _Runner(object):
 
         # Run the operations in the job
         for function, args, kwargs in job:
+            print(function, args, kwargs)
             function(*args, **kwargs)
 
 
@@ -48,4 +53,4 @@ class MultiprocessingParallelizationBackend(ParallelizationBackend):
             jobs: The job specification (see
                 owls_parallel.backends.ParallelizationBackend)
         """
-        self._cluster.map(_Runner(cache), jobs)
+        map(_Runner(cache), jobs)

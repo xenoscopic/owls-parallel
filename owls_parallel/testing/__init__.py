@@ -1,0 +1,41 @@
+"""Non-public API - provides a test function for parallelization.
+
+This module is necessary because parallelized functions must be importable by
+name on the backend.
+"""
+
+
+# owls-cache imports
+from owls_cache.persistent import cached as persistently_cached
+from owls_cache.persistent.caches.fs import FileSystemPersistentCache
+
+# owls-parallel imports
+from owls_parallel import parallelized
+
+
+# Global counter which records the number of times the computation is called
+counter = 0
+
+
+@parallelized(lambda a, b: 0, lambda a, b: 'key')
+@persistently_cached
+def computation(a, b):
+    """Test computation which is persistently-cached and parallelized.  It adds
+    two numbers.
+
+    Args:
+        a: The first number
+        b: The second number
+
+    Returns:
+        The sum of a and b.
+    """
+    # Increment the counter
+    global counter
+    counter += 1
+
+    # Return the result
+    return a + b
+
+
+# computation_parallel = parallelized(lambda a, b: 0, lambda a, b: 'key')(computation)

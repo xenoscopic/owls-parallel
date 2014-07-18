@@ -22,7 +22,7 @@ setup(
 
     # Setup dependencies
     install_requires = [
-        'ipython >= 2.1.0',
+        'owls-cache >= 0.0.1',
     ],
 
     # Metadata for PyPI

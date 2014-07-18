@@ -5,6 +5,7 @@
 # System imports
 import threading
 from collections import defaultdict
+from functools import wraps
 
 # Six imports
 from six import itervalues
@@ -23,7 +24,8 @@ _get_parallelizer = lambda: getattr(_thread_local, 'owls_parallelizer', None)
 
 
 # Utility function to set the current parallelizer
-_set_parallelizer = lambda p: _thread_local.owls_parallelizer = p
+def _set_parallelizer(parallelizer):
+    _thread_local.owls_parallelizer = parallelizer
 
 
 def parallelized(default_generator, mapper):
@@ -32,6 +34,8 @@ def parallelized(default_generator, mapper):
     The underlying function must be wrapped (inside of the @parallelized
     directive) with an @owls_cache.persistent.cached directive, or the result
     of the parallel computation will be lost.
+
+    The underlying function must also be importable by name on engines.
 
     Args:
         default_generator: A function which takes the same arguments as the
@@ -55,6 +59,9 @@ def parallelized(default_generator, mapper):
 
             # If we're not in capture mode, then we're done
             if parallelizer is None:
+                print('here', args, kwargs)
+                if args == ():
+                    raise RuntimeError('wtf')
                 return f(*args, **kwargs)
 
             # Otherwise, we are in capture mode, so we need to compute the key
@@ -85,9 +92,6 @@ class ParallelizedEnvironment(object):
         Args:
             backend: The backend to use for parallelization
         """
-        # Store the environment name
-        self._name = name
-
         # Create variables to track run state
         self._captured = False
         self._computed = False
@@ -95,8 +99,10 @@ class ParallelizedEnvironment(object):
         # Create the list of register jobs
         self._jobs = defaultdict(list)
 
-        # Grab current persistent cache
+        # Grab current persistent cache and validate it
         self._cache = get_persistent_cache()
+        if self._cache is None:
+            raise RuntimeError('global persistent cache not set')
 
         # Store the backend
         self._backend = backend
@@ -154,7 +160,7 @@ class ParallelizedEnvironment(object):
             # allow the loop to run to pull values out of the persistent cache
             self._computed = True
             _set_parallelizer(None)
-            self._backend.compute(tuple(
+            self._backend.compute(self._cache, tuple(
                 (tuple(j) for j in itervalues(self._jobs))
             ))
             return True
