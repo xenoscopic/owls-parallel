@@ -31,5 +31,5 @@ setup(
     description = 'Modular analysis toolkit - caching module',
     license = 'MIT',
     keywords = 'python big data analysis',
-    url = 'https://github.com/havoc-io/owls-cache'
+    url = 'https://github.com/havoc-io/owls-parallel'
 )
