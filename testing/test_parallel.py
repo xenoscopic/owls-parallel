@@ -2,6 +2,7 @@
 import unittest
 from subprocess import check_output
 from tempfile import mkdtemp
+from sys import version_info
 
 # owls-cache imports
 from owls_cache.persistent import set_persistent_cache
@@ -9,11 +10,9 @@ from owls_cache.persistent.caches.fs import FileSystemPersistentCache
 
 # owls-parallel imports
 from owls_parallel import parallelized, ParallelizedEnvironment
-from owls_parallel.backends.batch import BatchParallelizationBackend, \
-    qsub_submit, qsub_monitor
 from owls_parallel.backends.multiprocessing import \
     MultiprocessingParallelizationBackend
-from owls_parallel.backends.ipython import IPythonParallelizationBackend
+
 from owls_parallel.testing import counter, computation
 
 
@@ -21,17 +20,20 @@ from owls_parallel.testing import counter, computation
 multiprocessing_backend = MultiprocessingParallelizationBackend(2)
 
 
-# Try to set up the IPython backend, which may fail if an IPython cluster is
-# not available
-try:
-    ipython_backend = IPythonParallelizationBackend()
-except:
-    ipython_backend = None
+# If we're using Python 2.7 and IPython is available, create the backend
+if version_info[:2] == (2, 7):
+    try:
+        from owls_parallel.backends.ipython import IPythonParallelizationBackend
+        ipython_backend = IPythonParallelizationBackend()
+    except:
+        ipython_backend = None
 
 
 # Try to set up the batch backend, but only if the qsub command is available
 try:
     check_output(['qstat'])
+    from owls_parallel.backends.batch import BatchParallelizationBackend, \
+        qsub_submit, qsub_monitor
     batch_backend = BatchParallelizationBackend(mkdtemp(),
                                                 qsub_submit,
                                                 qsub_monitor,
