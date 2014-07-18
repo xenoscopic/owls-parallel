@@ -13,13 +13,8 @@ python:
 install:
   - sudo apt-get -qq update
   - pip install pep8
-  - if [ "$TRAVIS_PYTHON_VERSION" == '2.7' ]; then pip install ipython pyzmq; fi
   - pip install git+https://github.com/havoc-io/owls-cache.git
   - pip install -e .
-
-# Start an IPython cluster
-before_script:
- - if [ "$TRAVIS_PYTHON_VERSION" == '2.7' ]; then ipcluster start -n 2 & sleep 60; fi
 
 # Run PEP-8 compliance testing and unit tests
 script:

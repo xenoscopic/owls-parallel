@@ -2,7 +2,6 @@
 import unittest
 from subprocess import check_output
 from tempfile import mkdtemp
-from sys import version_info
 
 # owls-cache imports
 from owls_cache.persistent import set_persistent_cache
@@ -20,15 +19,13 @@ from owls_parallel.testing import counter, computation
 multiprocessing_backend = MultiprocessingParallelizationBackend(2)
 
 
-# If we're using Python 2.7 and IPython is available, create the backend
+# Try to set up the IPython backend, but only if a cluster is available
 ipython_backend = None
-if version_info[:2] == (2, 7):
-    try:
-        from owls_parallel.backends.ipython import \
-            IPythonParallelizationBackend
-        ipython_backend = IPythonParallelizationBackend()
-    except:
-        pass
+try:
+    from owls_parallel.backends.ipython import IPythonParallelizationBackend
+    ipython_backend = IPythonParallelizationBackend()
+except:
+    pass
 
 
 # Try to set up the batch backend, but only if the qsub command is available
