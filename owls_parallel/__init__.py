@@ -47,8 +47,7 @@ def parallelized(default_generator, mapper):
             suitable in place of the actual return value
         mapper: A function which takes the same arguments as the underlying
             function and returns a key by which jobs can be grouped with
-            maximal performance (e.g. to take advantage of caching).  The key
-            must be hashable.
+            maximal performance (e.g. to take advantage of caching).
 
     Returns:
         A version of the function which supports parallelization using a job
@@ -67,8 +66,9 @@ def parallelized(default_generator, mapper):
                 return f(*args, **kwargs)
 
             # Otherwise, we are in capture mode, so we need to compute the key
-            # by which to organize this job
-            key = mapper(*args, **kwargs)
+            # by which to organize this job.  We wrap things in a repr/hash so
+            # that the mapping function result needn't be hashable itself.
+            key = hash(repr(mapper(*args, **kwargs)))
 
             # Register the job with the parallelizer
             # NOTE: We register the *wrapper* function, because it is what will
