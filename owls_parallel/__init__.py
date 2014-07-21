@@ -35,11 +35,16 @@ def _set_parallelizer(parallelizer):
 def parallelized(default_generator, mapper):
     """Decorator to add parallelization functionality to a callable.
 
-    The underlying function must be wrapped (inside of the @parallelized
-    directive) with an @owls_cache.persistent.cached directive, or the result
+    The underlying function, or some function further down the call stack, must
+    be wrapped with an @owls_cache.persistent.cached directive (or some other
+    persistent caching mechanism which is globally available), or the result
     of the parallel computation will be lost.
 
-    The underlying function must also be importable by name on engines.
+    The @parallelized decorator must also be the outermost decorator used on
+    the function.
+
+    Finally, the underlying function must also be importable by name on
+    engines.
 
     Args:
         default_generator: A function which takes the same arguments as the
