@@ -128,6 +128,11 @@ class ParallelizedEnvironment(object):
         """
         self._jobs[key].append((function, args, kwargs))
 
+    def capturing(self):
+        """Returns True if the environment is in capture mode, False otherwise.
+        """
+        return self._captured and not self._computed
+
     def run(self):
         """Begins execution in a parallelized environment.
 

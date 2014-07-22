@@ -9,10 +9,14 @@ from owls_cache.persistent.caches.fs import FileSystemPersistentCache
 
 # owls-parallel imports
 from owls_parallel import parallelized, ParallelizedEnvironment
+from owls_parallel.backends.null import NullParallelizationBackend
 from owls_parallel.backends.multiprocessing import \
     MultiprocessingParallelizationBackend
-
 from owls_parallel.testing import counter, computation
+
+
+# Set up the null parallelization backend
+null_backend = NullParallelizationBackend()
 
 
 # Set up the multiprocessing backend
@@ -43,7 +47,7 @@ except:
 
 
 class TestParallelizationBase(unittest.TestCase):
-    def execute(self):
+    def execute(self, is_null = False):
         # Create and set the global persistent cache
         set_persistent_cache(FileSystemPersistentCache(mkdtemp()))
 
@@ -55,13 +59,22 @@ class TestParallelizationBase(unittest.TestCase):
         parallel = ParallelizedEnvironment(self._backend)
 
         # Run the computation a few times in the parallelized environment
+        loop_count = 0
         while parallel.run():
+            # Run some computations
             x = computation(1, 2)
             y = computation(3, 4)
             z = computation(5, 6)
 
+            # Check that we can monitor if we're capturing
+            if loop_count == 0:
+                self.assertTrue(parallel.capturing())
+            else:
+                self.assertFalse(parallel.capturing())
+            loop_count += 1
+
         # Make sure the computation was never invoked locally
-        self.assertEqual(counter.value, 0)
+        self.assertEqual(counter.value, 3 if is_null else 0)
 
         # Validate the results
         self.assertEqual(x, 3)
@@ -70,7 +83,15 @@ class TestParallelizationBase(unittest.TestCase):
 
         # Run outside of the parallelization environment
         self.assertEqual(computation(7, 8), 15)
-        self.assertEqual(counter.value, 1)
+        self.assertEqual(counter.value, 4 if is_null else 1)
+
+
+class TestNullParallelization(TestParallelizationBase):
+    def setUp(self):
+        self._backend = null_backend
+
+    def test(self):
+        self.execute(True)
 
 
 class TestMultiprocessingParallelization(TestParallelizationBase):
