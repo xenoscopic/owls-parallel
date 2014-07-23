@@ -90,6 +90,37 @@ def parallelized(default_generator, mapper):
     return decorator
 
 
+# Global parallelization backend
+_backend = None
+
+
+def set_parallelization_backend(backend):
+    """Sets the global parallelization backend.
+
+    The global cache is used by parallelization environments which are not
+    explicitly provided with a parallelization backend.
+
+    Args:
+        backend: An instance of a subclass of
+            owls_parallel.backends.ParallelizationBackend
+    """
+    # Switch to the global variable
+    global _backend
+
+    # Set the backend
+    _backend = backend
+
+
+def get_parallelization_backend():
+    """Gets the global parallelization backend.
+
+    Returns:
+        The global parallelization backend, or None if the global backend is
+        not set.
+    """
+    return _backend
+
+
 class ParallelizedEnvironment(object):
     """An environment in which functions wrapped with the @parallelized
     directive are captured when called and then executed on a given backend.
@@ -99,8 +130,10 @@ class ParallelizedEnvironment(object):
         """Creates a new instance of the ParallelizedEnvironment class.
 
         Args:
-            backend: The backend to use for parallelization, or None (the
-                default) to disable parallelization
+            backend: The backend to use for parallelization.  If None is
+                passed (the default), then the global parallelization backend
+                will be used, or if the global parallelization backend is not
+                set, no parallelization will be performed.
         """
         # Create variables to track run state
         self._captured = False
@@ -113,6 +146,11 @@ class ParallelizedEnvironment(object):
         self._cache = get_persistent_cache()
         if self._cache is None:
             raise RuntimeError('global persistent cache not set')
+
+        # If no backend has been provided, then try to grab the global
+        # parallelization backend
+        if backend is None:
+            backend = get_parallelization_backend()
 
         # Store the backend
         self._backend = backend

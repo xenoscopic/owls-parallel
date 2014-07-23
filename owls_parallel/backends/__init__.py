@@ -5,6 +5,9 @@
 class ParallelizationBackend(object):
     """The base class for all parallelization backends.  This backend should be
     subclassed by concrete implementations.
+
+    All backends should be reusable - i.e. they should be able to handle
+    multiple calls to `compute`.
     """
 
     def compute(self, cache, jobs):
