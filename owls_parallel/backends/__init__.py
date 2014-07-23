@@ -32,4 +32,4 @@ class ParallelizationBackend(object):
                     )
                 )
         """
-        raise NotImplementedError
+        raise NotImplementedError('abstract method')
