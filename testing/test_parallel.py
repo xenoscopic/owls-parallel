@@ -9,14 +9,9 @@ from owls_cache.persistent.caches.fs import FileSystemPersistentCache
 
 # owls-parallel imports
 from owls_parallel import parallelized, ParallelizedEnvironment
-from owls_parallel.backends.null import NullParallelizationBackend
 from owls_parallel.backends.multiprocessing import \
     MultiprocessingParallelizationBackend
 from owls_parallel.testing import counter, computation
-
-
-# Set up the null parallelization backend
-null_backend = NullParallelizationBackend()
 
 
 # Set up the multiprocessing backend
@@ -67,7 +62,7 @@ class TestParallelizationBase(unittest.TestCase):
             z = computation(5, 6)
 
             # Check that we can monitor if we're capturing
-            if loop_count == 0:
+            if loop_count == 0 and not is_null:
                 self.assertTrue(parallel.capturing())
             else:
                 self.assertFalse(parallel.capturing())
@@ -88,7 +83,7 @@ class TestParallelizationBase(unittest.TestCase):
 
 class TestNullParallelization(TestParallelizationBase):
     def setUp(self):
-        self._backend = null_backend
+        self._backend = None
 
     def test(self):
         self.execute(True)

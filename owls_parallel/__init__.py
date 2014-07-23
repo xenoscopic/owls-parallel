@@ -95,11 +95,12 @@ class ParallelizedEnvironment(object):
     directive are captured when called and then executed on a given backend.
     """
 
-    def __init__(self, backend):
+    def __init__(self, backend = None):
         """Creates a new instance of the ParallelizedEnvironment class.
 
         Args:
-            backend: The backend to use for parallelization
+            backend: The backend to use for parallelization, or None (the
+                default) to disable parallelization
         """
         # Create variables to track run state
         self._captured = False
@@ -162,7 +163,13 @@ class ParallelizedEnvironment(object):
             True or False depending on run state.
         """
         # Handle based on state
-        if not self._captured:
+        if self._backend is None and not (self._captured or self._computed):
+            # If we have no backend, then mark ourselves as completed the first
+            # time through, since we won't be doing any parallelization
+            self._captured = True
+            self._computed = True
+            return True
+        elif not self._captured:
             # If we haven't captured yet, then set the parallelizer for
             # capturing and allow the loop to run
             self._captured = True
