@@ -20,7 +20,7 @@ class CallCount(object):
 counter = CallCount()
 
 
-@parallelized(lambda a, b: 0, lambda a, b: 'key')
+@parallelized(lambda a, b: 0, lambda a, b: a)
 @persistently_cached
 def computation(a, b):
     """Test computation which is persistently-cached and parallelized.  It adds
@@ -34,7 +34,6 @@ def computation(a, b):
         The sum of a and b.
     """
     # Increment the counter
-    global counter
     counter.value += 1
 
     # Return the result

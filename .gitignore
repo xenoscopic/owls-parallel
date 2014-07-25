@@ -3,3 +3,6 @@
 
 # Python package stuff
 *.egg-info
+
+# Testing-generated directories
+.testing-*

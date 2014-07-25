@@ -1,7 +1,10 @@
 # System imports
 import unittest
 from subprocess import check_output
-from tempfile import mkdtemp
+from os.path import abspath
+from uuid import uuid4
+from os import makedirs
+from shutil import rmtree
 
 # owls-cache imports
 from owls_cache.persistent import set_persistent_cache
@@ -11,14 +14,13 @@ from owls_cache.persistent.caches.fs import FileSystemPersistentCache
 from owls_parallel import parallelized, ParallelizedEnvironment
 from owls_parallel.backends.multiprocessing import \
     MultiprocessingParallelizationBackend
+from owls_parallel.backends.batch import BatchParallelizationBackend, \
+    qsub_submit, qsub_monitor
 from owls_parallel.testing import counter, computation
 
 
-# Set up the multiprocessing backend
-multiprocessing_backend = MultiprocessingParallelizationBackend(2)
-
-
-# Try to set up the IPython backend, but only if a cluster is available
+# Check if IPython support is available, and try to setup a backend for it,
+# which will fail if a cluster is not available
 ipython_backend = None
 try:
     from owls_parallel.backends.ipython import IPythonParallelizationBackend
@@ -27,35 +29,39 @@ except:
     pass
 
 
-# Try to set up the batch backend, but only if the qsub command is available
-batch_backend = None
+# Check if batch parallelization is available (the backend will be created
+# later once the working directory is known)
+batch_available = False
 try:
     check_output(['qstat'])
-    from owls_parallel.backends.batch import BatchParallelizationBackend, \
-        qsub_submit, qsub_monitor
-    batch_backend = BatchParallelizationBackend(mkdtemp(),
-                                                qsub_submit,
-                                                qsub_monitor,
-                                                5)
+    batch_available = True
 except:
     pass
 
 
 class TestParallelizationBase(unittest.TestCase):
+    def setUp(self):
+        # Create a temporary working directory for the tests
+        self.working_directory = abspath('.testing-{0}'.format(uuid4().hex))
+        makedirs(self.working_directory)
+
+    def tearDown(self):
+        # Clean up the working directory
+        rmtree(self.working_directory)
+
     def execute(self, is_null = False):
         # Create and set the global persistent cache
-        set_persistent_cache(FileSystemPersistentCache(mkdtemp()))
+        set_persistent_cache(FileSystemPersistentCache(self.working_directory))
 
         # Reset the counter
-        global counter
         counter.value = 0
 
         # Create a parallelization environment with the current backend
-        parallel = ParallelizedEnvironment(self._backend)
+        parallel = ParallelizedEnvironment(self._backend, 5)
 
         # Run the computation a few times in the parallelized environment
         loop_count = 0
-        while parallel.run():
+        while parallel.run(False):
             # Run some computations
             x = computation(1, 2)
             y = computation(3, 4)
@@ -83,6 +89,10 @@ class TestParallelizationBase(unittest.TestCase):
 
 class TestNullParallelization(TestParallelizationBase):
     def setUp(self):
+        # Call superclass setup
+        super(TestNullParallelization, self).setUp()
+
+        # Set the backend
         self._backend = None
 
     def test(self):
@@ -91,7 +101,11 @@ class TestNullParallelization(TestParallelizationBase):
 
 class TestMultiprocessingParallelization(TestParallelizationBase):
     def setUp(self):
-        self._backend = multiprocessing_backend
+        # Call superclass setup
+        super(TestMultiprocessingParallelization, self).setUp()
+
+        # Set the backend
+        self._backend = MultiprocessingParallelizationBackend(2)
 
     def test(self):
         self.execute()
@@ -100,16 +114,26 @@ class TestMultiprocessingParallelization(TestParallelizationBase):
 @unittest.skipIf(ipython_backend is None, 'IPython cluster not available')
 class TestIPythonParallelization(TestParallelizationBase):
     def setUp(self):
+        # Call superclass setup
+        super(TestIPythonParallelization, self).setUp()
+
+        # Set the backend
         self._backend = ipython_backend
 
     def test(self):
         self.execute()
 
 
-@unittest.skipIf(batch_backend is None, 'Batch cluster not available')
+@unittest.skipIf(not batch_available, 'Batch cluster not available')
 class TestBatchParallelization(TestParallelizationBase):
     def setUp(self):
-        self._backend = batch_backend
+        # Call superclass setup
+        super(TestBatchParallelization, self).setUp()
+
+        # Set the backend
+        self._backend = BatchParallelizationBackend(self.working_directory,
+                                                    qsub_submit,
+                                                    qsub_monitor)
 
     def test(self):
         self.execute()

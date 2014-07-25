@@ -2,20 +2,25 @@
 """
 
 
-# Export the owls-parallel version
-__version__ = '0.0.1'
-
+# Future imports to support fancy print() on Python 2.x
+from __future__ import print_function
 
 # System imports
 import threading
 from collections import defaultdict
 from functools import wraps
+from time import sleep
+from sys import stdout
 
 # Six imports
 from six import itervalues
 
 # owls-cache imports
 from owls_cache.persistent import get_persistent_cache
+
+
+# Export the owls-parallel version
+__version__ = '0.0.1'
 
 
 # Create a thread-local variable to track whether or not the current thread is
@@ -126,7 +131,7 @@ class ParallelizedEnvironment(object):
     directive are captured when called and then executed on a given backend.
     """
 
-    def __init__(self, backend = None):
+    def __init__(self, backend = None, monitor_interval = 5):
         """Creates a new instance of the ParallelizedEnvironment class.
 
         Args:
@@ -134,6 +139,7 @@ class ParallelizedEnvironment(object):
                 passed (the default), then the global parallelization backend
                 will be used, or if the global parallelization backend is not
                 set, no parallelization will be performed.
+            monitor_interval: How often to query/print progress
         """
         # Create variables to track run state
         self._captured = False
@@ -152,8 +158,9 @@ class ParallelizedEnvironment(object):
         if backend is None:
             backend = get_parallelization_backend()
 
-        # Store the backend
+        # Store the backend and progress interval
         self._backend = backend
+        self._monitor_interval = monitor_interval
 
     def _record(self, key, function, args, kwargs):
         """Adds a new job to be computed on the parallel backend.
@@ -167,13 +174,61 @@ class ParallelizedEnvironment(object):
         """
         self._jobs[key].append((function, args, kwargs))
 
+    def _compute(self, progress = True):
+        """Runs computation and blocks until completion, optionally printing
+        progress.
+
+        Args:
+            progress: Whether or not to print progress information
+        """
+        # Start jobs
+        all_jobs = self._backend.start(self._cache, tuple(
+            (tuple(j) for j in itervalues(self._jobs))
+        ))
+
+        # Monitor jobs
+        remaining_jobs = all_jobs
+        while True:
+            # Grab the unfinished jobs
+            remaining_jobs = self._backend.prune(remaining_jobs)
+
+            # Compute progress
+            total = len(all_jobs)
+            completed = total - len(remaining_jobs)
+
+            # Print the percentage if necessary
+            if progress:
+                fraction_completed = 1.0 * completed / total
+                filled_blocks = int(fraction_completed / 0.1)
+                empty_blocks = 10 - filled_blocks
+                print(
+                    '\r[{0}{1}] {2:.0f}% ({3}/{4})'.format(
+                        '#' * filled_blocks,
+                        ' ' * empty_blocks,
+                        fraction_completed * 100,
+                        completed,
+                        total),
+                    end = ''
+                )
+                stdout.flush()
+
+            # If we're done, leave this loop
+            if completed == total:
+                if progress:
+                    print('')
+                break
+
+            # Wait for a few seconds for results to complete
+            sleep(self._monitor_interval)
+
     def capturing(self):
         """Returns True if the environment is in capture mode, False otherwise.
         """
         return self._captured and not self._computed
 
-    def run(self):
-        """Begins execution in a parallelized environment.
+    def run(self, progress = True):
+        """Manages execution in a parallelized environment, optionally printing
+        progress.
 
         This method is designed to wrap code which should be parallelized in a
         while loop, e.g.:
@@ -197,6 +252,9 @@ class ParallelizedEnvironment(object):
 
         On the third (or later) call, this method is a no-op and returns False.
 
+        Args:
+            progress: Whether or not to print progress information
+
         Returns:
             True or False depending on run state.
         """
@@ -204,12 +262,16 @@ class ParallelizedEnvironment(object):
         if self._backend is None and not (self._captured or self._computed):
             # If we have no backend, then mark ourselves as completed the first
             # time through, since we won't be doing any parallelization
+            if progress:
+                print('Parallelization unavailable, capturing...')
             self._captured = True
             self._computed = True
             return True
         elif not self._captured:
             # If we haven't captured yet, then set the parallelizer for
             # capturing and allow the loop to run
+            if progress:
+                print('Capturing for parallelization...')
             self._captured = True
             _set_parallelizer(self)
             return True
@@ -217,10 +279,10 @@ class ParallelizedEnvironment(object):
             # If we have already captured but haven't computed, then unset the
             # parallelizer and run the computations in a blocking manner, then
             # allow the loop to run to pull values out of the persistent cache
+            if progress:
+                print('Computing in parallel...')
             self._computed = True
             _set_parallelizer(None)
-            self._backend.compute(self._cache, tuple(
-                (tuple(j) for j in itervalues(self._jobs))
-            ))
+            self._compute(progress)
             return True
         return False

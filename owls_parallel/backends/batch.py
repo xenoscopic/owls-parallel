@@ -5,9 +5,10 @@
 # System imports
 from os.path import exists, isdir, join
 from os import makedirs
-from subprocess import check_output, CalledProcessError
+from subprocess import check_output, CalledProcessError, \
+    STDOUT as MERGE_WITH_STDOUT
 from uuid import uuid4
-from time import sleep
+from base64 import b64encode
 
 # Six imports
 from six.moves.cPickle import dumps
@@ -19,15 +20,18 @@ from owls_parallel.backends import ParallelizationBackend
 # Template script for submission to the batch system
 _BATCH_TEMPLATE = """#!/usr/bin/env python
 
+# System imports
+from base64 import b64decode
+
 # Six imports
 from six.moves.cPickle import loads
 
 # Initialize the persistent cache
 from owls_cache.persistent import set_persistent_cache
-set_persistent_cache(loads('{cache}'))
+set_persistent_cache(loads(b64decode('{cache}')))
 
 # Run the operations
-operations = loads('{operations}')
+operations = loads(b64decode('{operations}'))
 for function, args, kwargs in operations:
     function(*args, **kwargs)
 """
@@ -37,7 +41,7 @@ class BatchParallelizationBackend(ParallelizationBackend):
     """A parallelization backend which uses a batch system to compute results.
     """
 
-    def __init__(self, path, submit, monitor, interval = 5):
+    def __init__(self, path, submit, monitor):
         """Initializes a new instance of the BatchParallelizationBackend.
 
         Args:
@@ -50,8 +54,6 @@ class BatchParallelizationBackend(ParallelizationBackend):
             monitor: A function to monitor the status of a job on the batch
                 system, which should accept the job id as an argument and
                 return True if the job is complete, False otherwise
-            interval: The polling interval at which to check batch system
-                completion
         """
         # Make sure the path exists and store it
         if exists(path):
@@ -65,9 +67,8 @@ class BatchParallelizationBackend(ParallelizationBackend):
         # Store submission/monitoring commands and polling interval
         self._submit = submit
         self._monitor = monitor
-        self._interval = interval
 
-    def compute(self, cache, jobs):
+    def start(self, cache, jobs):
         """Run jobs on the backend, blocking until their completion.
 
         Args:
@@ -75,15 +76,15 @@ class BatchParallelizationBackend(ParallelizationBackend):
             jobs: The job specification (see
                 owls_parallel.backends.ParallelizationBackend)
         """
-        # Create a list to track unfinished ids
-        unfinished = []
+        # Create the result list
+        results = []
 
         # Go through each job and create a batch job for it
         for job in jobs:
             # Create the job content
             batch_script = _BATCH_TEMPLATE.format(**{
-                "cache": dumps(cache),
-                "operations": dumps(job)
+                "cache": b64encode(dumps(cache)),
+                "operations": b64encode(dumps(job)),
             })
 
             # Create an on-disk handle
@@ -95,19 +96,23 @@ class BatchParallelizationBackend(ParallelizationBackend):
                 f.write(batch_script)
 
             # Submit the batch job and record the job id
-            unfinished.append(self._submit(self._path, script_name))
+            results.append(self._submit(self._path, script_name))
 
-        # Monitor completion of batch jobs
-        while True:
-            # Sleep
-            sleep(self._interval)
+        # All done
+        return results
 
-            # Check remaining jobs
-            unfinished = [j for j in unfinished if not self._monitor(j)]
+    def prune(self, job_ids):
+        """Prunes a list of job ids by pruning those which are complete.
 
-            # If everything is done, return
-            if len(unfinished) == 0:
-                break
+        The input list should not be modified.
+
+        Args:
+            job_ids: A list of job_ids to prune
+
+        Returns:
+            A new list of jobs ids whose jobs are still incomplete.
+        """
+        return [j for j in job_ids if not self._monitor(j)]
 
 
 def qsub_submit(working_directory, script_name):
@@ -120,7 +125,8 @@ def qsub_submit(working_directory, script_name):
     Returns:
         The job id.
     """
-    return check_output(['qsub', script_name],
+    return check_output(['qsub', '-l', 'cput=1:00:00,walltime=1:00:00',
+                         script_name],
                         cwd = working_directory).strip('\n')
 
 
@@ -136,7 +142,7 @@ def qsub_monitor(job_id):
     try:
         # If the qstat command returns a 0 exit code, it means the jobs was
         # found, which means it is running
-        check_output(['qstat', job_id])
+        check_output(['qstat', job_id], stderr = MERGE_WITH_STDOUT)
         return False
     except CalledProcessError:
         # If the qstat command returns a non-0 exit code, it means the job was

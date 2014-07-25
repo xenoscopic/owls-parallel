@@ -12,18 +12,14 @@ from owls_cache.persistent import set_persistent_cache
 from owls_parallel.backends import ParallelizationBackend
 
 
-# Create a class to execute jobs on the cluster
-class _Runner(object):
-    def __init__(self, cache):
-        self._cache = cache
+# Create a function to execute jobs on the cluster
+def _run(cache, job):
+    # Set the persistent cache
+    set_persistent_cache(cache)
 
-    def __call__(self, job):
-        # Set the persistent cache
-        set_persistent_cache(self._cache)
-
-        # Run the operations in the job
-        for function, args, kwargs in job:
-            function(*args, **kwargs)
+    # Run the operations in the job
+    for function, args, kwargs in job:
+        function(*args, **kwargs)
 
 
 class IPythonParallelizationBackend(ParallelizationBackend):
@@ -42,7 +38,7 @@ class IPythonParallelizationBackend(ParallelizationBackend):
         # Create the cluster view
         self._cluster = self._client.load_balanced_view()
 
-    def compute(self, cache, jobs):
+    def start(self, cache, jobs):
         """Run jobs on the backend, blocking until their completion.
 
         Args:
@@ -50,4 +46,27 @@ class IPythonParallelizationBackend(ParallelizationBackend):
             jobs: The job specification (see
                 owls_parallel.backends.ParallelizationBackend)
         """
-        self._cluster.map_sync(_Runner(cache), jobs)
+        return [self._cluster.apply_async(_run, cache, j) for j in jobs]
+
+    def prune(self, job_ids):
+        """Prunes a list of job ids by pruning those which are complete.
+
+        The input list should not be modified.
+
+        Args:
+            job_ids: A list of job_ids to prune
+
+        Returns:
+            A new list of jobs ids whose jobs are still incomplete.
+        """
+        # Extract unfinished jobs, and re-raise any remote exceptions
+        result = []
+        for j in job_ids:
+            if j.ready():
+                # This will re-raise remotely-raised exceptions locally
+                j.get()
+            else:
+                result.append(j)
+
+        # All done
+        return result
