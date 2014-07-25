@@ -263,7 +263,7 @@ class ParallelizedEnvironment(object):
             # If we have no backend, then mark ourselves as completed the first
             # time through, since we won't be doing any parallelization
             if progress:
-                print('Parallelization unavailable, capturing...')
+                print('Parallelization unavailable, computing...')
             self._captured = True
             self._computed = True
             return True
