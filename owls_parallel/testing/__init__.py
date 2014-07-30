@@ -21,7 +21,8 @@ counter = CallCount()
 
 
 @parallelized(lambda a, b: 0, lambda a, b: (a,))
-@persistently_cached('owls_parallel.testing.computation', lambda a, b: (a, b))
+@persistently_cached('owls_parallel.testing.computation',
+                     lambda a, b: (repr(a), repr(b)))
 def computation(a, b):
     """Test computation which is persistently-cached and parallelized.  It adds
     two numbers.

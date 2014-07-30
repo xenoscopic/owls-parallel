@@ -55,10 +55,11 @@ def parallelized(default_generator, mapper):
         default_generator: A function which takes the same arguments as the
             underlying function and returns a dummy default value which will be
             suitable in place of the actual return value
-        mapper: A function which takes the same arguments as the underlying
-            function and returns a `hash`able and `repr`able tuple which acts
-            as a key by which to group parallel jobs (this can be useful to,
-            e.g., group jobs in a manner which will be conducive to caching)
+        mapper: A function which accepts the same arguments as the underlying
+            function and maps them to a tuple of representations (i.e. the
+            results of `repr`) or hashable values which should be used as a key
+            by which to group parallel jobs (this can be useful to, e.g., group
+            jobs in a manner which will be conducive to caching)
 
     Returns:
         A version of the function which supports parallelization using a job
