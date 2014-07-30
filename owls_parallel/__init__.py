@@ -56,10 +56,10 @@ def parallelized(default_generator, mapper):
             underlying function and returns a dummy default value which will be
             suitable in place of the actual return value
         mapper: A function which accepts the same arguments as the underlying
-            function and maps them to a tuple of representations (i.e. the
-            results of `repr`) or hashable values which should be used as a key
-            by which to group parallel jobs (this can be useful to, e.g., group
-            jobs in a manner which will be conducive to caching)
+            function and maps them to a tuple of values (which will be 'hashed'
+            using `repr`) to act as a key by which to group parallel jobs (this
+            can be useful to, e.g., group jobs in a manner that will be
+            conducive to caching)
 
     Returns:
         A version of the function which supports parallelization using a job
@@ -79,7 +79,7 @@ def parallelized(default_generator, mapper):
 
             # Otherwise, we are in capture mode, so we need to compute the key
             # by which to organize this job
-            key = mapper(*args, **kwargs)
+            key = repr(mapper(*args, **kwargs))
 
             # Register the job with the parallelizer
             # NOTE: We register the *wrapper* function, because it is what will
