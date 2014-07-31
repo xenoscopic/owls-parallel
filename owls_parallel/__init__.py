@@ -107,7 +107,8 @@ class ParallelizedEnvironment(object):
         """Creates a new instance of the ParallelizedEnvironment class.
 
         Args:
-            backend: The backend to use for parallelization
+            backend: The backend to use for parallelization (None for no
+                parallelization)
             monitor_interval: How often to query/print progress, in seconds
                 (defaults to 5)
         """
