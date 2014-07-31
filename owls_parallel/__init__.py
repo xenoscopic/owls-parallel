@@ -16,7 +16,10 @@ from sys import stdout
 from six import itervalues
 
 # owls-cache imports
-from owls_cache.persistent import get_persistent_cache
+# HACK: We use a private function, but owls-parallel is intrinsically linked to
+# owls-cache since it is used as a transport mechanism, so I guess we'll live
+# with it.
+from owls_cache.persistent import _get_cache
 
 
 # Export the owls-parallel version
@@ -41,8 +44,7 @@ def parallelized(default_generator, mapper):
     """Decorator to add parallelization functionality to a callable.
 
     The underlying function, or some function further down the call stack, must
-    be wrapped with an @owls_cache.persistent.cached directive (or some other
-    persistent caching mechanism which is globally available), or the result
+    be wrapped with an @owls_cache.persistent.cached directive, or the result
     of the parallel computation will be lost.
 
     The @parallelized decorator must also be the outermost decorator used on
@@ -96,51 +98,18 @@ def parallelized(default_generator, mapper):
     return decorator
 
 
-# Global parallelization backend
-_backend = None
-
-
-def set_parallelization_backend(backend):
-    """Sets the global parallelization backend.
-
-    The global cache is used by parallelization environments which are not
-    explicitly provided with a parallelization backend.
-
-    Args:
-        backend: An instance of a subclass of
-            owls_parallel.backends.ParallelizationBackend
-    """
-    # Switch to the global variable
-    global _backend
-
-    # Set the backend
-    _backend = backend
-
-
-def get_parallelization_backend():
-    """Gets the global parallelization backend.
-
-    Returns:
-        The global parallelization backend, or None if the global backend is
-        not set.
-    """
-    return _backend
-
-
 class ParallelizedEnvironment(object):
     """An environment in which functions wrapped with the @parallelized
     directive are captured when called and then executed on a given backend.
     """
 
-    def __init__(self, backend = None, monitor_interval = 5):
+    def __init__(self, backend, monitor_interval = 5):
         """Creates a new instance of the ParallelizedEnvironment class.
 
         Args:
-            backend: The backend to use for parallelization.  If None is
-                passed (the default), then the global parallelization backend
-                will be used, or if the global parallelization backend is not
-                set, no parallelization will be performed.
-            monitor_interval: How often to query/print progress
+            backend: The backend to use for parallelization
+            monitor_interval: How often to query/print progress, in seconds
+                (defaults to 5)
         """
         # Create variables to track run state
         self._captured = False
@@ -148,16 +117,6 @@ class ParallelizedEnvironment(object):
 
         # Create the list of register jobs
         self._jobs = defaultdict(list)
-
-        # Grab current persistent cache and validate it
-        self._cache = get_persistent_cache()
-        if self._cache is None:
-            raise RuntimeError('global persistent cache not set')
-
-        # If no backend has been provided, then try to grab the global
-        # parallelization backend
-        if backend is None:
-            backend = get_parallelization_backend()
 
         # Store the backend and progress interval
         self._backend = backend
@@ -182,8 +141,13 @@ class ParallelizedEnvironment(object):
         Args:
             progress: Whether or not to print progress information
         """
+        # Grab current persistent cache and validate it
+        cache = _get_cache()
+        if cache is None:
+            raise RuntimeError('not inside a cached context')
+
         # Start jobs
-        all_jobs = self._backend.start(self._cache, tuple(
+        all_jobs = self._backend.start(cache, tuple(
             (tuple(j) for j in itervalues(self._jobs))
         ))
 
@@ -234,15 +198,17 @@ class ParallelizedEnvironment(object):
         This method is designed to wrap code which should be parallelized in a
         while loop, e.g.:
 
-            # Compute results in a parallel manner
-            parallelizer = ParallelizedEnvironment(...)
-            while parallelizer.run():
-                # Peform computation which should be parallelized
-                value_1 = function_1()
-                value_2 = function_2()
+            # Execute in a cached environment (required)
+            with caching_into(my_cache):
+                # Compute results in a parallel manner
+                parallelizer = ParallelizedEnvironment(...)
+                while parallelizer.run():
+                    # Peform computation which should be parallelized
+                    value_1 = function_1()
+                    value_2 = function_2()
 
-            # Use results
-            ...
+                # Use results
+                ...
 
         On the first call, this method sets the global state (within the
         thread) to a mode where all @parallelized calls are captured for later

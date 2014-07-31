@@ -6,7 +6,7 @@
 from IPython.parallel import Client
 
 # owls-cache imports
-from owls_cache.persistent import set_persistent_cache
+from owls_cache.persistent import caching_into
 
 # owls-parallel imports
 from owls_parallel.backends import ParallelizationBackend
@@ -14,12 +14,9 @@ from owls_parallel.backends import ParallelizationBackend
 
 # Create a function to execute jobs on the cluster
 def _run(cache, job):
-    # Set the persistent cache
-    set_persistent_cache(cache)
-
-    # Run the operations in the job
-    for function, args, kwargs in job:
-        function(*args, **kwargs)
+    with caching_into(cache):
+        for function, args, kwargs in job:
+            function(*args, **kwargs)
 
 
 class IPythonParallelizationBackend(ParallelizationBackend):

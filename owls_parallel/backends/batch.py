@@ -26,14 +26,14 @@ from base64 import b64decode
 # Six imports
 from six.moves.cPickle import loads
 
-# Initialize the persistent cache
-from owls_cache.persistent import set_persistent_cache
-set_persistent_cache(loads(b64decode('{cache}')))
+# owls-cache imports
+from owls_cache.persistent import caching_into
 
 # Run the operations
 operations = loads(b64decode('{operations}'))
-for function, args, kwargs in operations:
-    function(*args, **kwargs)
+with caching_into(loads(b64decode('{cache}'))):
+    for function, args, kwargs in operations:
+        function(*args, **kwargs)
 """
 
 

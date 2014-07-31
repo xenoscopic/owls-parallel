@@ -7,7 +7,7 @@ from os import makedirs
 from shutil import rmtree
 
 # owls-cache imports
-from owls_cache.persistent import set_persistent_cache
+from owls_cache.persistent import caching_into
 from owls_cache.persistent.caches.fs import FileSystemPersistentCache
 
 # owls-parallel imports
@@ -50,9 +50,6 @@ class TestParallelizationBase(unittest.TestCase):
         rmtree(self.working_directory)
 
     def execute(self, is_null = False):
-        # Create and set the global persistent cache
-        set_persistent_cache(FileSystemPersistentCache(self.working_directory))
-
         # Reset the counter
         counter.value = 0
 
@@ -61,18 +58,19 @@ class TestParallelizationBase(unittest.TestCase):
 
         # Run the computation a few times in the parallelized environment
         loop_count = 0
-        while parallel.run(False):
-            # Run some computations
-            x = computation(1, 2)
-            y = computation(3, 4)
-            z = computation(5, 6)
+        with caching_into(FileSystemPersistentCache(self.working_directory)):
+            while parallel.run(False):
+                # Run some computations
+                x = computation(1, 2)
+                y = computation(3, 4)
+                z = computation(5, 6)
 
-            # Check that we can monitor if we're capturing
-            if loop_count == 0 and not is_null:
-                self.assertTrue(parallel.capturing())
-            else:
-                self.assertFalse(parallel.capturing())
-            loop_count += 1
+                # Check that we can monitor if we're capturing
+                if loop_count == 0 and not is_null:
+                    self.assertTrue(parallel.capturing())
+                else:
+                    self.assertFalse(parallel.capturing())
+                loop_count += 1
 
         # Make sure the computation was never invoked locally
         self.assertEqual(counter.value, 3 if is_null else 0)
