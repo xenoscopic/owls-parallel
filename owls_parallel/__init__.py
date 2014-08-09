@@ -42,7 +42,8 @@ def _set_parallelizer(parallelizer):
 
 # The default batch executer
 def _batcher(function, args_kwargs):
-    map(lambda a_k: function(*a_k[0], **a_k[1]), args_kwargs)
+    for args, kwargs in args_kwargs:
+        function(*args, **kwargs)
 
 
 def parallelized(default_generator, mapper, batcher = _batcher):
