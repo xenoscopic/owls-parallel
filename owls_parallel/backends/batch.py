@@ -11,6 +11,7 @@ from uuid import uuid4
 from base64 import b64encode
 
 # Six imports
+from six import itervalues
 from six.moves.cPickle import dumps
 
 # owls-parallel imports
@@ -25,15 +26,17 @@ from base64 import b64decode
 
 # Six imports
 from six.moves.cPickle import loads
+from six import iteritems
 
 # owls-cache imports
 from owls_cache.persistent import caching_into
 
-# Run the operations
-operations = loads(b64decode('{operations}'))
+# Run the job
+job = loads(b64decode('{job}'))
 with caching_into(loads(b64decode('{cache}'))):
-    for function, args, kwargs in operations:
-        function(*args, **kwargs)
+    for batcher, calls in iteritems(job):
+        for function, args_kwargs in iteritems(calls):
+            batcher(function, args_kwargs)
 """
 
 
@@ -80,11 +83,11 @@ class BatchParallelizationBackend(ParallelizationBackend):
         results = []
 
         # Go through each job and create a batch job for it
-        for job in jobs:
+        for job in itervalues(jobs):
             # Create the job content
             batch_script = _BATCH_TEMPLATE.format(**{
                 "cache": b64encode(dumps(cache)),
-                "operations": b64encode(dumps(job)),
+                "job": b64encode(dumps(job)),
             })
 
             # Create an on-disk handle

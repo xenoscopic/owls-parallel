@@ -13,7 +13,7 @@ from time import sleep
 from sys import stdout
 
 # Six imports
-from six import itervalues
+from six import iteritems
 
 # owls-cache imports
 # HACK: We use a private function, but owls-parallel is intrinsically linked to
@@ -40,7 +40,12 @@ def _set_parallelizer(parallelizer):
     _thread_local.owls_parallelizer = parallelizer
 
 
-def parallelized(default_generator, mapper):
+# The default batch executer
+def _batcher(function, args_kwargs):
+    map(lambda a_k: function(*a_k[0], **a_k[1]), args_kwargs)
+
+
+def parallelized(default_generator, mapper, batcher = _batcher):
     """Decorator to add parallelization functionality to a callable.
 
     The underlying function, or some function further down the call stack, must
@@ -62,6 +67,12 @@ def parallelized(default_generator, mapper):
             using `repr`) to act as a key by which to group parallel jobs (this
             can be useful to, e.g., group jobs in a manner that will be
             conducive to caching)
+        batcher: A function which can be called with a function and a list of
+            (args, kwargs) tuples and call the function with each of the
+            arguments.  Defaults to a naive implementation which simply
+            iterates through args/kwargs and calls the function, but users can
+            replace this with a function which calls the underlying function in
+            a more optimal manner (e.g. one conducive to caching).
 
     Returns:
         A version of the function which supports parallelization using a job
@@ -86,7 +97,7 @@ def parallelized(default_generator, mapper):
             # Register the job with the parallelizer
             # NOTE: We register the *wrapper* function, because it is what will
             # be assigned to the name of the function
-            parallelizer._record(key, wrapper, args, kwargs)
+            parallelizer._record(key, batcher, wrapper, args, kwargs)
 
             # Return a dummy value
             return default_generator(*args, **kwargs)
@@ -96,6 +107,24 @@ def parallelized(default_generator, mapper):
 
     # Return the decorator
     return decorator
+
+
+# Convenience function to recursively convert defaultdict objects to normal
+# dictionary objects so they can be pickled (if we use lambdas in the
+# constructor of the defaultdict, they won't pickle)
+def _dict_convert(dictionary):
+    # Create the result
+    result = {}
+
+    # Add items
+    for k, v in iteritems(dictionary):
+        if isinstance(v, defaultdict):
+            result[k] = _dict_convert(v)
+        else:
+            result[k] = v
+
+    # All done
+    return result
 
 
 class ParallelizedEnvironment(object):
@@ -116,24 +145,43 @@ class ParallelizedEnvironment(object):
         self._captured = False
         self._computed = False
 
-        # Create the list of register jobs
-        self._jobs = defaultdict(list)
+        # Create the list of register jobs.  Structure is:
+        # {
+        #     {
+        #         key: {
+        #             batcher: {
+        #                 function: [
+        #                     (args1, kwargs1),
+        #                     ...
+        #                     (argsN, kwargsN),
+        #                 ],
+        #                 ...
+        #             },
+        #             ...
+        #         },
+        #         ...
+        #     }
+        # }
+        self._jobs = defaultdict(
+            lambda: defaultdict(lambda: defaultdict(list))
+        )
 
         # Store the backend and progress interval
         self._backend = backend
         self._monitor_interval = monitor_interval
 
-    def _record(self, key, function, args, kwargs):
+    def _record(self, key, batcher, function, args, kwargs):
         """Adds a new job to be computed on the parallel backend.
 
         Args:
             key: The key by which to group the job for optimal performance.
                 The key must be hashable.
+            batcher: The batch computation algorithm to use
             function: The function to execute
             args: The arguments to the function
             kwargs: The keyword arguments to the function
         """
-        self._jobs[key].append((function, args, kwargs))
+        self._jobs[key][batcher][function].append((args, kwargs))
 
     def _compute(self, progress = True):
         """Runs computation and blocks until completion, optionally printing
@@ -148,9 +196,7 @@ class ParallelizedEnvironment(object):
             raise RuntimeError('not inside a cached context')
 
         # Start jobs
-        all_jobs = self._backend.start(cache, tuple(
-            (tuple(j) for j in itervalues(self._jobs))
-        ))
+        all_jobs = self._backend.start(cache, _dict_convert(self._jobs))
 
         # Monitor jobs
         remaining_jobs = all_jobs

@@ -15,25 +15,24 @@ class ParallelizationBackend(object):
 
         Args:
             cache: The persistent cache which should be set on the backend
-            jobs: A tuple of tuple of tuples of the form:
+            jobs: A map structure of the form:
 
-                (
-                    # Job 1
-                    (
-                        (function_1, args_1, kwargs_1),
+                {
+                    key: {
+                        batcher: {
+                            function: [
+                                (args1, kwargs1),
+                                ...
+                                (argsN, kwargsN),
+                            ],
+                            ...
+                        },
                         ...
-                        (function_M, args_M, kwargs_M)
-                    ),
-
+                    },
                     ...
+                }
 
-                    # Job N
-                    (
-                        (function_1, args_1, kwargs_1),
-                        ...
-                        (function_L, args_L, kwargs_L)
-                    )
-                )
+            where a separate job should be created for each key
 
         Returns:
             A list of 'job id' objects, which are implementation-dependent, but

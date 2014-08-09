@@ -9,6 +9,9 @@ from __future__ import absolute_import
 # System imports
 from multiprocessing import Pool
 
+# Six imports
+from six import iteritems, itervalues
+
 # owls-cache imports
 from owls_cache.persistent import caching_into
 
@@ -19,8 +22,9 @@ from owls_parallel.backends import ParallelizationBackend
 # Create a function to execute jobs on the cluster
 def _run(cache, job):
     with caching_into(cache):
-        for function, args, kwargs in job:
-            function(*args, **kwargs)
+        for batcher, calls in iteritems(job):
+            for function, args_kwargs in iteritems(calls):
+                batcher(function, args_kwargs)
 
 
 class MultiprocessingParallelizationBackend(ParallelizationBackend):
@@ -45,7 +49,9 @@ class MultiprocessingParallelizationBackend(ParallelizationBackend):
             jobs: The job specification (see
                 owls_parallel.backends.ParallelizationBackend)
         """
-        return [self._cluster.apply_async(_run, (cache, j)) for j in jobs]
+        return [self._cluster.apply_async(_run, (cache, j))
+                for j
+                in itervalues(jobs)]
 
     def prune(self, job_ids):
         """Prunes a list of job ids by pruning those which are complete.
