@@ -72,7 +72,8 @@ def parallelized(default_generator, mapper, batcher = _batcher):
             arguments.  Defaults to a naive implementation which simply
             iterates through args/kwargs and calls the function, but users can
             replace this with a function which calls the underlying function in
-            a more optimal manner (e.g. one conducive to caching).
+            a more optimal manner (e.g. one conducive to caching).  This
+            function must be pickleable (i.e. importable by name).
 
     Returns:
         A version of the function which supports parallelization using a job
