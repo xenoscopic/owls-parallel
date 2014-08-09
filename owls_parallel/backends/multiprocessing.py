@@ -49,7 +49,6 @@ class MultiprocessingParallelizationBackend(ParallelizationBackend):
             jobs: The job specification (see
                 owls_parallel.backends.ParallelizationBackend)
         """
-        print(jobs)
         return [self._cluster.apply_async(_run, (cache, j))
                 for j
                 in itervalues(jobs)]
