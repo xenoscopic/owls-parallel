@@ -19,7 +19,7 @@ install:
 # Run PEP-8 compliance testing and unit tests
 script:
   - common/scripts/run-pep8.sh
-  - common/scripts/run-tests.sh
+  - NOSE_NOCAPTURE=1 common/scripts/run-tests.sh
 
 # Send notifications
 notifications:
