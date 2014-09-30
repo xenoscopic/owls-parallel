@@ -46,7 +46,7 @@ def _batcher(function, args_kwargs):
         function(*args, **kwargs)
 
 
-def parallelized(default_generator, mapper, batcher = _batcher):
+def parallelized(mocker, mapper, batcher = _batcher):
     """Decorator to add parallelization functionality to a callable.
 
     The underlying function, or some function further down the call stack, must
@@ -60,9 +60,10 @@ def parallelized(default_generator, mapper, batcher = _batcher):
     engines.
 
     Args:
-        default_generator: A function which takes the same arguments as the
-            underlying function and returns a dummy default value which will be
-            suitable in place of the actual return value
+        mocker: A function which takes the same arguments as the underlying
+            function and returns a dummy default value which has the same
+            algebraic as the actual return value, but which can be computed
+            quickly and returned whilst in capture mode
         mapper: A function which accepts the same arguments as the underlying
             function and maps them to a tuple of values (which will be 'hashed'
             using `repr`) to act as a key by which to group parallel jobs (this
@@ -94,7 +95,7 @@ def parallelized(default_generator, mapper, batcher = _batcher):
 
             # Otherwise, we are in capture mode, so we need to compute the key
             # by which to organize this job
-            key = repr(mapper(*args, **kwargs))
+            key = hash(mapper(*args, **kwargs))
 
             # Register the job with the parallelizer
             # NOTE: We register the *wrapper* function, because it is what will
@@ -102,7 +103,7 @@ def parallelized(default_generator, mapper, batcher = _batcher):
             parallelizer._record(key, batcher, wrapper, args, kwargs)
 
             # Return a dummy value
-            return default_generator(*args, **kwargs)
+            return mocker(*args, **kwargs)
 
         # Return the wrapper
         return wrapper
