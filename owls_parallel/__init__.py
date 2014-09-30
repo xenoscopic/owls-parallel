@@ -65,10 +65,13 @@ def parallelized(mocker, mapper, batcher = _batcher):
             algebraic as the actual return value, but which can be computed
             quickly and returned whilst in capture mode
         mapper: A function which accepts the same arguments as the underlying
-            function and maps them to a tuple of values (which will be 'hashed'
-            using `repr`) to act as a key by which to group parallel jobs (this
-            can be useful to, e.g., group jobs in a manner that will be
-            conducive to caching)
+            function and maps them to a hashable tuple of values, which will
+            then be hashed to act as a grouping key for parallel jobs.  This
+            can be useful to, e.g., group jobs in a manner conducive to
+            caching.  If the argument types to the underlying function are not
+            hashable (e.g. they are lists or dictionaries), then this function
+            provides a mechanism by which to convert them to hashable types
+            (e.g. tuples).
         batcher: A function which can be called with a function and a list of
             (args, kwargs) tuples and call the function with each of the
             arguments.  Defaults to a naive implementation which simply
