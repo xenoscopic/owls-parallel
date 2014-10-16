@@ -71,11 +71,6 @@ class BatchParallelizationBackend(ParallelizationBackend):
         self._submit = submit
         self._monitor = monitor
 
-    def mode(self):
-        """Returns the operation mode of the backend when waiting for jobs.
-        """
-        return 'poll'
-
     def start(self, cache, job_specs, callback):
         """Run jobs on the backend, blocking until their completion.
 

@@ -39,11 +39,6 @@ class IPythonParallelizationBackend(ParallelizationBackend):
         # Create the cluster view
         self._cluster = self._client.load_balanced_view()
 
-    def mode(self):
-        """Returns the operation mode of the backend when waiting for jobs.
-        """
-        return 'poll'
-
     def start(self, cache, job_specs, callback):
         """Run jobs on the backend, blocking until their completion.
 

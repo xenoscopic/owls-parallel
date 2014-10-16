@@ -202,31 +202,20 @@ class ParallelizedEnvironment(object):
         if cache is None:
             raise RuntimeError('not inside a cached context')
 
-        # Determine the operation mode of the backend and create the callable
-        # which is going to drive our monitoring loop (along with the callback
-        # for notifying backends)
-        mode = self._backend.mode()
-        if mode == 'notify':
-            # Create the notification queue
-            notification_queue = queue.Queue()
+        # Create a queue on which backends can notify us of new results
+        notification_queue = queue.Queue()
 
-            # Create the montoring condition
-            def monitor():
-                notification_queue.get()
-                return True
+        # Create a monitoring function, which waits for notifications, but also
+        # allows for regular polling
+        def monitor():
+            try:
+                notification_queue.get(timeout = self._monitor_interval)
+            except queue.Empty:
+                pass
+            return True
 
-            # Set up the callback
-            callback = lambda: notification_queue.put(None)
-        elif mode == 'poll':
-            # Create the monitoring condition
-            def monitor():
-                sleep(self._monitor_interval)
-                return True
-
-            # Set up the callback
-            callback = None
-        else:
-            raise ValueError('invalid operation mode ({0})'.format(mode))
+        # Create a notification callback
+        callback = lambda: notification_queue.put(None)
 
         # Start jobs
         all_jobs = self._backend.start(cache,

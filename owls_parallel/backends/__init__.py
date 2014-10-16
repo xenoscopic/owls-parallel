@@ -10,14 +10,6 @@ class ParallelizationBackend(object):
     multiple calls to `compute`.
     """
 
-    def mode(self):
-        """Returns the operation mode of the backend when waiting for jobs.
-
-        Backends may be either 'notify' or 'poll', and this method should
-        return one of these two strings.
-        """
-        raise NotImplementedError('abstract method')
-
     def start(self, cache, job_specs, callback):
         """Starts jobs on the backend, letting them run asynchronously.
 
@@ -42,12 +34,10 @@ class ParallelizationBackend(object):
 
                 where a separate job should be created for each key
             callback: A callback which can be used to notify the
-                parallelization environment that new results are available and
-                that the job list will be pruned.  For backends which rely on
-                'poll' behavior, this argument will be set to None.  For
-                backends which support 'notify' behavior, this callback must be
-                called at least once after the last job result becomes
-                available.  This function will be non-blocking.
+                parallelization environment that new results are available.
+                Invocation of this callback is optional, as the environment
+                will reguarly poll for new results via prune, but this can be
+                used for more efficient waiting.
 
         Returns:
             A collection of 'job' objects.  The collection is up to the
