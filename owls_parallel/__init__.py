@@ -208,7 +208,7 @@ class ParallelizedEnvironment(object):
         mode = self._backend.mode()
         if mode == 'notify':
             # Create the notification queue
-            notification_queue = queue.Queue(1)
+            notification_queue = queue.Queue()
 
             # Create the montoring condition
             def monitor():
