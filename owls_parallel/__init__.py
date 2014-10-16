@@ -14,6 +14,7 @@ from sys import stdout
 
 # Six imports
 from six import iteritems
+from six.moves import queue
 
 # owls-cache imports
 # HACK: We use a private function, but owls-parallel is intrinsically linked to
@@ -201,12 +202,40 @@ class ParallelizedEnvironment(object):
         if cache is None:
             raise RuntimeError('not inside a cached context')
 
+        # Determine the operation mode of the backend and create the callable
+        # which is going to drive our monitoring loop (along with the callback
+        # for notifying backends)
+        mode = self._backend.mode()
+        if mode == 'notify':
+            # Create the notification queue
+            notification_queue = queue.Queue(1)
+
+            # Create the montoring condition
+            def monitor():
+                notification_queue.get()
+                return True
+
+            # Set up the callback
+            callback = lambda: notification_queue.put(None)
+        elif mode == 'poll':
+            # Create the monitoring condition
+            def monitor():
+                sleep(self._monitor_interval)
+                return True
+
+            # Set up the callback
+            callback = None
+        else:
+            raise ValueError('invalid operation mode ({0})'.format(mode))
+
         # Start jobs
-        all_jobs = self._backend.start(cache, _dict_convert(self._jobs))
+        all_jobs = self._backend.start(cache,
+                                       _dict_convert(self._jobs),
+                                       callback)
 
         # Monitor jobs
         remaining_jobs = all_jobs
-        while True:
+        while monitor():
             # Grab the unfinished jobs
             remaining_jobs = self._backend.prune(remaining_jobs)
 
@@ -235,9 +264,6 @@ class ParallelizedEnvironment(object):
                 if progress:
                     print('')
                 break
-
-            # Wait for a few seconds for results to complete
-            sleep(self._monitor_interval)
 
     def capturing(self):
         """Returns True if the environment is in capture mode, False otherwise.

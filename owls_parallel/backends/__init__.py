@@ -10,12 +10,20 @@ class ParallelizationBackend(object):
     multiple calls to `compute`.
     """
 
-    def start(self, cache, jobs):
+    def mode(self):
+        """Returns the operation mode of the backend when waiting for jobs.
+
+        Backends may be either 'notify' or 'poll', and this method should
+        return one of these two strings.
+        """
+        raise NotImplementedError('abstract method')
+
+    def start(self, cache, job_specs, callback):
         """Starts jobs on the backend, letting them run asynchronously.
 
         Args:
             cache: The persistent cache which should be set on the backend
-            jobs: A map structure of the form:
+            job_specs: A map structure of the form:
 
                 {
                     key: {
@@ -32,23 +40,31 @@ class ParallelizationBackend(object):
                     ...
                 }
 
-            where a separate job should be created for each key
+                where a separate job should be created for each key
+            callback: A callback which can be used to notify the
+                parallelization environment that new results are available and
+                that the job list will be pruned.  For backends which rely on
+                'poll' behavior, this argument will be set to None.  For
+                backends which support 'notify' behavior, this callback must be
+                called at least once after the last job result becomes
+                available.  This function will be non-blocking.
 
         Returns:
-            A list of 'job id' objects, which are implementation-dependent, but
-            which can be used to monitor job progress via the `prune` method.
+            A collection of 'job' objects.  The collection is up to the
+            implementer, but it must support at least the `__len__` method.
+            Used to monitor jobs via the `prune` method.
         """
         raise NotImplementedError('abstract method')
 
-    def prune(self, job_ids):
-        """Prunes a list of job ids by pruning those which are complete.
+    def prune(self, jobs):
+        """Prunes a collection of jobs by pruning those which are complete.
 
-        The input list should not be modified.
+        The input collection should not be modified.
 
         Args:
-            job_ids: A list of job_ids to prune
+            jobs: A collection of jobs to prune
 
         Returns:
-            A new list of jobs ids whose jobs are still incomplete.
+            A new collection of jobs which are still incomplete.
         """
         raise NotImplementedError('abstract method')

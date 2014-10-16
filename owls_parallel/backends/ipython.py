@@ -39,32 +39,38 @@ class IPythonParallelizationBackend(ParallelizationBackend):
         # Create the cluster view
         self._cluster = self._client.load_balanced_view()
 
-    def start(self, cache, jobs):
+    def mode(self):
+        """Returns the operation mode of the backend when waiting for jobs.
+        """
+        return 'poll'
+
+    def start(self, cache, job_specs, callback):
         """Run jobs on the backend, blocking until their completion.
 
         Args:
             cache: The persistent cache which should be set on the backend
-            jobs: The job specification (see
+            job_specs: The job specification (see
                 owls_parallel.backends.ParallelizationBackend)
+            callback: The job notification callback, not used by this backend
         """
         return [self._cluster.apply_async(_run, cache, j)
                 for j
-                in itervalues(jobs)]
+                in itervalues(job_specs)]
 
-    def prune(self, job_ids):
-        """Prunes a list of job ids by pruning those which are complete.
+    def prune(self, jobs):
+        """Prunes a collection of jobs by pruning those which are complete.
 
-        The input list should not be modified.
+        The input collection should not be modified.
 
         Args:
-            job_ids: A list of job_ids to prune
+            jobs: A collection of jobs to prune
 
         Returns:
-            A new list of jobs ids whose jobs are still incomplete.
+            A new collection of jobs which are still incomplete.
         """
         # Extract unfinished jobs, and re-raise any remote exceptions
         result = []
-        for j in job_ids:
+        for j in jobs:
             if j.ready():
                 # This will re-raise remotely-raised exceptions locally
                 j.get()

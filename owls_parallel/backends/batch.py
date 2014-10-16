@@ -71,23 +71,29 @@ class BatchParallelizationBackend(ParallelizationBackend):
         self._submit = submit
         self._monitor = monitor
 
-    def start(self, cache, jobs):
+    def mode(self):
+        """Returns the operation mode of the backend when waiting for jobs.
+        """
+        return 'poll'
+
+    def start(self, cache, job_specs, callback):
         """Run jobs on the backend, blocking until their completion.
 
         Args:
             cache: The persistent cache which should be set on the backend
-            jobs: The job specification (see
+            job_specs: The job specification (see
                 owls_parallel.backends.ParallelizationBackend)
+            callback: The job notification callback, not used by this backend
         """
         # Create the result list
         results = []
 
         # Go through each job and create a batch job for it
-        for job in itervalues(jobs):
+        for spec in itervalues(job_specs):
             # Create the job content
             batch_script = _BATCH_TEMPLATE.format(**{
                 "cache": b64encode(dumps(cache)),
-                "job": b64encode(dumps(job)),
+                "job": b64encode(dumps(spec)),
             })
 
             # Create an on-disk handle
@@ -104,18 +110,18 @@ class BatchParallelizationBackend(ParallelizationBackend):
         # All done
         return results
 
-    def prune(self, job_ids):
-        """Prunes a list of job ids by pruning those which are complete.
+    def prune(self, jobs):
+        """Prunes a collection of jobs by pruning those which are complete.
 
-        The input list should not be modified.
+        The input collection should not be modified.
 
         Args:
-            job_ids: A list of job_ids to prune
+            jobs: A collection of jobs to prune
 
         Returns:
-            A new list of jobs ids whose jobs are still incomplete.
+            A new collection of jobs which are still incomplete.
         """
-        return [j for j in job_ids if not self._monitor(j)]
+        return [j for j in jobs if not self._monitor(j)]
 
 
 def qsub_submit(working_directory, script_name):
