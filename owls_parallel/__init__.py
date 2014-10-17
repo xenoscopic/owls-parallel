@@ -6,6 +6,7 @@
 from __future__ import print_function
 
 # System imports
+import os
 import threading
 from collections import defaultdict
 from functools import wraps
@@ -25,6 +26,10 @@ from owls_cache.persistent import _get_cache
 
 # Export the owls-parallel version
 __version__ = '0.0.1'
+
+
+# Determine if the process' output is being redirected
+_output_is_tty = (os.fstat(0) == os.fstat(1))
 
 
 # Create a thread-local variable to track whether or not the current thread is
@@ -190,7 +195,7 @@ class ParallelizedEnvironment(object):
         """
         self._jobs[key][batcher][function].append((args, kwargs))
 
-    def _compute(self, progress = True):
+    def _compute(self, progress):
         """Runs computation and blocks until completion, optionally printing
         progress.
 
@@ -222,8 +227,21 @@ class ParallelizedEnvironment(object):
                                        _dict_convert(self._jobs),
                                        callback)
 
+        # Compute printing parameters
+        n_blocks = 50
+        percentage_width = 3
+        job_count_width = len(str(len(all_jobs)))
+        format_string = \
+            '{{}}[{{:<{0}}}] {{:>{1}.0f}}% ({{:>{2}}}/{{:>{2}}})'.format(
+                n_blocks,
+                percentage_width,
+                job_count_width
+            )
+
         # Monitor jobs
         remaining_jobs = all_jobs
+        previous_completed = 0
+        initial = True
         while monitor():
             # Grab the unfinished jobs
             remaining_jobs = self._backend.prune(remaining_jobs)
@@ -233,20 +251,26 @@ class ParallelizedEnvironment(object):
             completed = total - len(remaining_jobs)
 
             # Print the percentage if necessary
-            if progress:
-                fraction_completed = 1.0 * completed / total
-                filled_blocks = int(fraction_completed / 0.1)
-                empty_blocks = 10 - filled_blocks
+            if progress and ((completed != previous_completed) or initial):
+                # Compute display information
+                fraction_completed = float(completed) / total
+                filled_blocks = int(fraction_completed * n_blocks)
+
+                # Print differently based on the output device
                 print(
-                    '\r[{0}{1}] {2:.0f}% ({3}/{4})'.format(
+                    format_string.format(
+                        '\r' if _output_is_tty else '',
                         '#' * filled_blocks,
-                        ' ' * empty_blocks,
                         fraction_completed * 100,
                         completed,
                         total),
-                    end = ''
+                    end = '' if _output_is_tty else os.linesep
                 )
                 stdout.flush()
+
+            # Update state
+            previous_completed = completed
+            initial = False
 
             # If we're done, leave this loop
             if completed == total:
