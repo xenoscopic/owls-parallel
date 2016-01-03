@@ -38,7 +38,8 @@ _thread_local = threading.local()
 
 
 # Utility function to get the current parallelizer
-_get_parallelizer = lambda: getattr(_thread_local, 'owls_parallelizer', None)
+def _get_parallelizer():
+    return getattr(_thread_local, 'owls_parallelizer', None)
 
 
 # Utility function to set the current parallelizer
@@ -220,7 +221,8 @@ class ParallelizedEnvironment(object):
             return True
 
         # Create a notification callback
-        callback = lambda: notification_queue.put(None)
+        def callback():
+            return notification_queue.put(None)
 
         # Start jobs
         all_jobs = self._backend.start(cache,
