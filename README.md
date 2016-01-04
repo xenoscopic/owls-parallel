@@ -14,25 +14,7 @@ in a more natural, serial manner, rather than trying to manually organize and
 batch computations.  Second, this module is designed to evaluate these batches
 in parallel on a variety of different parallelization backends, including a
 process pool, an IPython cluster, a Portable Batch System, or a custom
-parallelization backend.
-
-Because this module aims to satisfy both of these goals, the approach it takes
-is somewhat unique.  The basic idea is that it does two "runs" of code within a
-Python context.  The first run is a "capture" run - it runs through arbitrarily
-structured code, returning "dummy" values for functions flagged for batching and
-parallelization, recording the arguments passed to these functions, and creating
-optimized batches of function calls for parallelization.  By returning dummy
-values that have the same interface and algebraic behavior as the real values,
-code can be naturally structured and still run in a manner that allows function
-calls to be captured.  After the capture run, the batches are evaluated in
-parallel.  Instead of retrieving results from the parallelization backend,
-functions flagged for batching and parallelization must also be flagged for
-persistent memoization into a common persistent store (usually something like
-[Redis](http://redis.io/)) using the
-[owls-cache module](https://github.com/havoc-io/owls-cache).  Once parallel
-computation is complete, the code inside the parallelization context enters the
-second run, where all function calls simply return their persistently memoized
-values.
+parallelization backend.  See the "Usage" section below for more information.
 
 
 ## Requirements
@@ -54,6 +36,24 @@ Alternatively, you may execute `setup.py` manually, but this is not supported.
 
 
 ## Usage
+
+Because this module aims to satisfy both batching and parallelization goals, the
+approach it takes is somewhat unique.  The basic idea is that it does two "runs"
+of code within a Python context.  The first run is a "capture" run - it runs
+through arbitrarily structured code, returning "dummy" values for functions
+flagged for batching and parallelization, recording the arguments passed to
+these functions, and creating optimized batches of function calls for
+parallelization.  By returning dummy values that have the same interface and
+algebraic behavior as the real values, code can be naturally structured and
+still run in a manner that allows function calls to be captured.  After the
+capture run, the batches are evaluated in parallel.  Instead of retrieving
+results from the parallelization backend, functions flagged for batching and
+parallelization must also be flagged for persistent memoization into a common
+persistent store using the
+[owls-cache module](https://github.com/havoc-io/owls-cache).  Once parallel
+computation is complete, the code inside the parallelization context enters the
+second run, where all function calls simply return their persistently memoized
+values.
 
 Parallelization of functions is provided by the `owls_parallel.parallelized`
 decorator.  For this decorator to have any beneficial effect, it must be
@@ -132,7 +132,10 @@ One very important caveat: functions flagged for batching and parallelization
 MUST be globally importable by name on systems where they are computed in
 parallel, just like with the multiprocessing module and IPython.  This is
 necessary so that these functions can be pickled.  This is an unfortunate
-restriction of Python (why can't it just pickle freakin' bytecode?).
+restriction of Python (why can't it just pickle freakin' bytecode?).  In most
+cases though, this is not a problem for OWLS users, because the owls-hep module
+provides most of the parallelization functionality required, and only owls-hep
+functions need to be importable on worker nodes, not the end-user's code.
 
 Three parallelization backends are provided by the owls-parallel module: a
 process pool based on Python's multiprocessing module, an IPython cluster, or a
